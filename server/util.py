@@ -1,28 +1,17 @@
-import numpy as np
+from datetime import date
 import math
 import json
 import pickle
 import threading
+
+import pandas as pd
 import requests
 
 __schools = None
 __city_dic = None
-__data_columns = None
+__data_columns = {}
 __model = None
 API_KEY = "AIzaSyBYMGxceM10RqSBpWvVRwmL9u_lyjRYb88"
-
-
-def get_estimated_price():
-    x = np.zeros(len(__data_columns))
-    return __model.predict([x])[0]
-
-
-def get_schools():
-    return __schools
-
-
-def get_cities():
-    return __city_dic
 
 
 def load_saved_artifacts():
@@ -44,6 +33,44 @@ def load_saved_artifacts():
         print("Loading saved artifacts...done!")
 
 
+def get_estimated_price(location, radius):
+    load_saved_artifacts()
+    latitude, longitude = map(float, location.split(','))
+
+    l = generate_data_object(API_KEY, location, radius)
+    print(l)
+    # Generate data objects
+    x1_df = pd.DataFrame(l, index=[0])
+
+    # Create x2_df with additional features
+    x2_df = pd.DataFrame({
+        "id": 0,
+        "land_type": 8,
+        "max_curr": 0,
+        "min_curr": 0,
+        "latitude": [latitude],
+        "longitude": [longitude],
+        "curr_month": [date.today().month],
+        "curr_year": [date.today().year]
+    })
+
+    # Concatenate x1_df and x2_df along columns
+    x = pd.concat([x1_df, x2_df], axis=1)
+
+    # Assuming __model is defined somewhere in your code
+    return __model.predict(x)[0]
+
+
+
+
+def get_schools():
+    return __schools
+
+
+def get_cities():
+    return __city_dic
+
+
 def generate_data_object(api_key, location_details, area_radius):
     __gen_data = {}
 
@@ -54,7 +81,6 @@ def generate_data_object(api_key, location_details, area_radius):
     threads = []
 
     for category, subcategories in __types.items():
-
         # Use threading for concurrent execution of get_info
         thread = threading.Thread(target=process_category,
                                   args=(__gen_data, __types, api_key, location_details, area_radius, category))
@@ -74,10 +100,10 @@ def process_category(__gen_data, __types, api_key, location_details, area_radius
     for subcategory, value in __types[category].items():
         if "_count" in subcategory:
             __types[category][subcategory] = count_types
-            __gen_data[subcategory] = count_types
+            __gen_data[subcategory] = float(count_types)
         if "_mindist" in subcategory:
             __types[category][subcategory] = min_distance
-            __gen_data[subcategory] = min_distance
+            __gen_data[subcategory] = float(min_distance.replace("km", "").replace(" ", "")) * 1000
 
 
 def get_info(api_key, location_d, radius_m, place_type):
@@ -90,7 +116,6 @@ def get_info(api_key, location_d, radius_m, place_type):
         'type': place_type,
         'key': api_key,
     }
-    print(place_type)
 
     places_response = requests.get(places_endpoint, params=places_params)
     places_data = places_response.json()
@@ -137,19 +162,19 @@ def get_info(api_key, location_d, radius_m, place_type):
                         return count_types, distance
                     else:
                         print(f"Distance information not available for {place_type}")
-                        return count_types, 0, None
+                        return count_types, "0"
                 else:
                     print(f"Error calculating distance for {place_type}: {distance_data['status']}")
-                    return count_types, 0
+                    return count_types, "0"
             else:
                 print("Error finding nearest location.")
-                return count_types, 0
+                return count_types, "0"
         else:
             print(f"No {place_type} found.")
-            return 0, 0
+            return 0, "0"
     else:
         print(f"Error finding {place_type}: {places_data['status']}")
-        return 0, 0
+        return 0, "0"
 
 
 def haversine_distance(origin, destination):
@@ -176,7 +201,6 @@ def deg2rad(deg):
 
 
 if __name__ == '__main__':
-    location = "37.7769,-122.4194"
-    radius = 100
-    value = generate_data_object(API_KEY, location, radius)
-    print(value)
+    location_input = "6.919962, 80.029113"
+    radius_input = 5000
+    print(get_estimated_price(location_input, radius_input))
