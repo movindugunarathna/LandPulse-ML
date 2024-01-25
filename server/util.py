@@ -9,6 +9,7 @@ import pandas as pd
 import requests
 
 __data_columns = []
+__land_types = {}
 __model: Union[None, Type[DecisionTreeRegressor]] = None
 API_KEY = "AIzaSyBYMGxceM10RqSBpWvVRwmL9u_lyjRYb88"
 __lock = threading.Lock()
@@ -18,9 +19,13 @@ def load_saved_artifacts():
     print("Loading saved artifacts...")
     global __data_columns
     global __model
+    global __land_types
 
     with open("./artifacts/columns.json", 'r') as f:
         __data_columns = json.load(f)['data_columns']
+
+    with open("./artifacts/landType.json", 'r') as f:
+        __land_types = json.load(f)
 
     with open("./artifacts/Model.pickle", 'rb') as f:
         __model = pickle.load(f)
@@ -29,8 +34,8 @@ def load_saved_artifacts():
     print("Loading saved artifacts...done!")
 
 
-def get_estimated_price(location, radius):
-    input_values = get_input(location, radius)
+def get_estimated_price(location, land_type, radius):
+    input_values = get_input(location, land_type, radius)
 
     while True:
 
@@ -43,7 +48,7 @@ def get_estimated_price(location, radius):
                 for i, name in enumerate(__data_columns):
                     dictionary[name] = input_values[i]
 
-                print("Dictionary: "+str(dictionary))
+                print("Dictionary: " + str(dictionary))
 
                 output_array = __model.predict(X=[input_values])[0]
                 return {
@@ -56,17 +61,19 @@ def get_estimated_price(location, radius):
             except Exception as e:
                 return {"message": f"Error: {str(e)}"}
 
-        if len(input_values) != len(__data_columns): break
+        if len(input_values) != len(__data_columns):
+            break
 
     return {"message": "Nothing came out!"}
 
 
-def get_input(location, radius):
+def get_input(location, land_type, radius):
     latitude, longitude = map(float, location.split(','))
 
     x1_df = pd.DataFrame(generate_data_object(API_KEY, location, radius), index=[0])
 
     x2_df = pd.DataFrame({
+        "land_type": land_type_generation(land_type),
         "latitude": [latitude],
         "longitude": [longitude],
         "curr_month": [date.today().month],
@@ -194,12 +201,15 @@ def haversine_distance(origin, destination):
     return distance
 
 
+def land_type_generation(land_type):
+    land_type_value = 0
+
+    for key, value in __land_types.items():
+        if key in land_type:
+            land_type_value += value
+
+    return land_type_value
+
+
 def deg2rad(deg):
     return deg * (math.pi / 180)
-
-
-if __name__ == '__main__':
-    location_input = "6.897928711019126,79.91887213019518"
-    radius_input = 5000
-    x = get_estimated_price(location_input, radius_input)
-    print(x)

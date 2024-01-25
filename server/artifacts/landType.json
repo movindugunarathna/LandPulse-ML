@@ -1,0 +1,6 @@
+{
+    "Agricultural": 1,
+    "Commercial": 2,
+    "Residential": 3,
+    "Other": 4
+}
