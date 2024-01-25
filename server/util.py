@@ -11,44 +11,7 @@ import requests
 __data_columns = []
 __model: Union[None, Type[DecisionTreeRegressor]] = None
 API_KEY = "AIzaSyBYMGxceM10RqSBpWvVRwmL9u_lyjRYb88"
-
-
-def get_input(location, radius):
-
-    latitude, longitude = map(float, location.split(','))
-
-    x1_df = pd.DataFrame(generate_data_object(API_KEY, location, radius), index=[0])
-
-    x2_df = pd.DataFrame({
-        "latitude": [latitude],
-        "longitude": [longitude],
-        "curr_month": [date.today().month],
-        "curr_year": [date.today().year]
-    })
-
-    connected_df = pd.concat([x1_df, x2_df], axis=1)
-
-    input_values = [connected_df[name].values[0] for name in __data_columns]
-
-    return input_values, __data_columns
-
-
-def get_estimated_price(location, radius):
-    load_saved_artifacts()
-    input_values, column_names = get_input(location, radius)
-
-    try:
-        if __model is None:
-            raise ValueError("Model is not loaded. Cannot make predictions.")
-
-        output_array = __model.predict([input_values])[0]
-        return {
-            "price": output_array[0],
-            "min_next": output_array[1],
-            "max_next": output_array[2]
-        }
-    except Exception as e:
-        return {"message": f"Error: {str(e)}"}
+__lock = threading.Lock()
 
 
 def load_saved_artifacts():
@@ -64,6 +27,55 @@ def load_saved_artifacts():
         if not isinstance(__model, DecisionTreeRegressor):
             raise ValueError("Loaded model is not a DecisionTreeRegressor.")
     print("Loading saved artifacts...done!")
+
+
+def get_estimated_price(location, radius):
+    input_values = get_input(location, radius)
+
+    while True:
+
+        if len(input_values) == len(__data_columns):
+            try:
+                if __model is None:
+                    raise ValueError("Model is not loaded. Cannot make predictions.")
+
+                dictionary = {}
+                for i, name in enumerate(__data_columns):
+                    dictionary[name] = input_values[i]
+
+                print("Dictionary: "+str(dictionary))
+
+                output_array = __model.predict(X=[input_values])[0]
+                return {
+                    "price": float(output_array[0]),
+                    "min_next": float(output_array[1]),
+                    "max_next": float(output_array[2]),
+                    "Obj": {key: str(value) for key, value in dictionary.items()}
+                }
+
+            except Exception as e:
+                return {"message": f"Error: {str(e)}"}
+
+        if len(input_values) != len(__data_columns): break
+
+    return {"message": "Nothing came out!"}
+
+
+def get_input(location, radius):
+    latitude, longitude = map(float, location.split(','))
+
+    x1_df = pd.DataFrame(generate_data_object(API_KEY, location, radius), index=[0])
+
+    x2_df = pd.DataFrame({
+        "latitude": [latitude],
+        "longitude": [longitude],
+        "curr_month": [date.today().month],
+        "curr_year": [date.today().year]
+    })
+
+    connected_df = pd.concat([x1_df, x2_df], axis=1)
+
+    return [connected_df[name].values[0] for name in __data_columns]
 
 
 def generate_data_object(api_key, location_details, area_radius):
@@ -88,13 +100,22 @@ def generate_data_object(api_key, location_details, area_radius):
 def process_category(__gen_data, __types, api_key, location_details, area_radius, category):
     count_types, min_distance = get_info(api_key, location_details, area_radius, category)
 
-    for subcategory, value in __types[category].items():
-        if "_count" in subcategory:
-            __types[category][subcategory] = count_types
-            __gen_data[subcategory] = float(count_types)
-        if "_mindist" in subcategory:
-            __types[category][subcategory] = min_distance
-            __gen_data[subcategory] = float(min_distance.replace("km", "").replace(" ", "")) * 1000
+    with __lock:
+
+        for subcategory, value in __types[category].items():
+            if "_count" in subcategory:
+                __types[category][subcategory] = count_types
+                __gen_data[subcategory] = float(count_types)
+            if "_mindist" in subcategory:
+                if "km" in min_distance:
+                    __types[category][subcategory] = min_distance
+                    __gen_data[subcategory] = float(min_distance.replace("km", "").replace(" ", "")) * 1000
+                elif "m" in min_distance:
+                    __types[category][subcategory] = min_distance
+                    __gen_data[subcategory] = float(min_distance.replace("m", "").replace(" ", ""))
+                else:
+                    __types[category][subcategory] = min_distance
+                    __gen_data[subcategory] = float(min_distance.replace(" ", ""))
 
 
 def get_info(api_key, location_d, radius_m, place_type):
@@ -141,19 +162,19 @@ def get_info(api_key, location_d, radius_m, place_type):
                         return count_types, distance
                     else:
                         print(f"Distance information not available for {place_type}")
-                        return count_types, "0"
+                        return count_types, "0 km"
                 else:
                     print(f"Error calculating distance for {place_type}: {distance_data['status']}")
-                    return count_types, "0"
+                    return count_types, "0 km"
             else:
                 print("Error finding nearest location.")
-                return count_types, "0"
+                return count_types, "0 km"
         else:
             print(f"No {place_type} found.")
-            return 0, "0"
+            return 0, "0 km"
     else:
         print(f"Error finding {place_type}: {places_data['status']}")
-        return 0, "0"
+        return 0, "0 km"
 
 
 def haversine_distance(origin, destination):
