@@ -3,7 +3,6 @@ import math
 import json
 import pickle
 import threading
-
 import pandas as pd
 import requests
 
@@ -30,7 +29,6 @@ def get_input(location, radius):
 
     x1_df = pd.DataFrame(generate_data_object(API_KEY, location, radius), index=[0])
 
-    # Create x2_df with additional features
     x2_df = pd.DataFrame({
         "latitude": [latitude],
         "longitude": [longitude],
@@ -38,28 +36,22 @@ def get_input(location, radius):
         "curr_year": [date.today().year]
     })
 
-    # Concatenate x1_df and x2_df along columns
     x = pd.concat([x1_df, x2_df], axis=1)
 
-    input_values = []
-
-    for name in column_names:
-        input_values.append(x[name].values[0])
+    input_values = [x[name].values[0] for name in column_names]
 
     return input_values, column_names
 
 
 def get_estimated_price(location, radius):
     load_saved_artifacts()
-
     input_values, column_names = get_input(location, radius)
-
-    # Assuming __model is defined somewhere in your code
     output_array = __model.predict([input_values])[0]
+
     return {
-        "Price": (output_array[0]),
-        "min_next_month": (output_array[1]),
-        "max_next_month": (output_array[2])
+        "Price": output_array[0],
+        "min_next_month": output_array[1],
+        "max_next_month": output_array[2]
     }
 
 
@@ -92,21 +84,17 @@ def get_cities():
 
 def generate_data_object(api_key, location_details, area_radius):
     __gen_data = {}
-
     with open("./artifacts/types.json", 'r') as f:
         __types = json.load(f)
 
-    # List to store threads
     threads = []
 
     for category, subcategories in __types.items():
-        # Use threading for concurrent execution of get_info
         thread = threading.Thread(target=process_category,
                                   args=(__gen_data, __types, api_key, location_details, area_radius, category))
         thread.start()
         threads.append(thread)
 
-    # Wait for all threads to finish
     for thread in threads:
         thread.join()
 
@@ -126,9 +114,7 @@ def process_category(__gen_data, __types, api_key, location_details, area_radius
 
 
 def get_info(api_key, location_d, radius_m, place_type):
-    # Google Places API endpoint for text search
     places_endpoint = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-
     places_params = {
         'location': location_d,
         'radius': radius_m,
@@ -139,42 +125,32 @@ def get_info(api_key, location_d, radius_m, place_type):
     places_response = requests.get(places_endpoint, params=places_params)
     places_data = places_response.json()
 
-    # Process the response
     if places_data['status'] == 'OK':
         count_types = len(places_data['results'])
 
         if count_types > 0:
-            # Initialize variables for nearest location and minimum distance
             nearest_location = None
             min_distance = float('inf')
 
             for result in places_data['results']:
                 location_details = result['geometry']['location']
-
-                # Calculate distance between the given location and the current place
                 current_distance = haversine_distance(location_d, location_details)
 
-                # Update nearest location if the current distance is smaller
                 if current_distance < min_distance:
                     min_distance = current_distance
                     nearest_location = location_details
 
             if nearest_location is not None:
-                # Google Distance Matrix API endpoint
                 distance_endpoint = "https://maps.googleapis.com/maps/api/distancematrix/json"
-
-                # Parameters for the API request to calculate distance
                 distance_params = {
                     'origins': location_d,
                     'destinations': f'{nearest_location["lat"]},{nearest_location["lng"]}',
                     'key': api_key,
                 }
 
-                # Make the API request to calculate distance
                 distance_response = requests.get(distance_endpoint, params=distance_params)
                 distance_data = distance_response.json()
 
-                # Process the distance response
                 if distance_data['status'] == 'OK':
                     if 'distance' in distance_data['rows'][0]['elements'][0]:
                         distance = distance_data['rows'][0]['elements'][0]['distance']['text']
@@ -197,12 +173,10 @@ def get_info(api_key, location_d, radius_m, place_type):
 
 
 def haversine_distance(origin, destination):
-    # Calculate the Haversine distance between two points on the Earth
     lat1, lon1 = map(float, origin.split(","))
     lat2, lon2 = destination["lat"], destination["lng"]
 
-    R = 6371  # Earth radius in kilometers
-
+    R = 6371
     d_lat = deg2rad(lat2 - lat1)
     d_lon = deg2rad(lon2 - lon1)
 
@@ -211,7 +185,7 @@ def haversine_distance(origin, destination):
          math.sin(d_lon / 2) * math.sin(d_lon / 2))
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-    distance = R * c  # Distance in kilometers
+    distance = R * c
     return distance
 
 
@@ -223,3 +197,4 @@ if __name__ == '__main__':
     location_input = "6.897928711019126,79.91887213019518"
     radius_input = 5000
     x = get_estimated_price(location_input, radius_input)
+    print(x)
