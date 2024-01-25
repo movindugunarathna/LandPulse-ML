@@ -1,17 +1,19 @@
 from datetime import date
 from typing import Type, Union
+
+import googlemaps
 from sklearn.tree import DecisionTreeRegressor
 import math
 import json
 import pickle
 import threading
 import pandas as pd
-import requests
 
 __data_columns = []
 __land_types = {}
 __model: Union[None, Type[DecisionTreeRegressor]] = None
 API_KEY = "AIzaSyBYMGxceM10RqSBpWvVRwmL9u_lyjRYb88"
+gmaps = googlemaps.Client(key="AIzaSyBYMGxceM10RqSBpWvVRwmL9u_lyjRYb88")
 __lock = threading.Lock()
 
 
@@ -20,6 +22,7 @@ def load_saved_artifacts():
     global __data_columns
     global __model
     global __land_types
+    global gmaps
 
     with open("./artifacts/columns.json", 'r') as f:
         __data_columns = json.load(f)['data_columns']
@@ -70,7 +73,7 @@ def get_estimated_price(location, land_type, radius):
 def get_input(location, land_type, radius):
     latitude, longitude = map(float, location.split(','))
 
-    x1_df = pd.DataFrame(generate_data_object(API_KEY, location, radius), index=[0])
+    x1_df = pd.DataFrame(generate_data_object(location, radius), index=[0])
 
     x2_df = pd.DataFrame({
         "land_type": land_type_generation(land_type),
@@ -85,7 +88,7 @@ def get_input(location, land_type, radius):
     return [connected_df[name].values[0] for name in __data_columns]
 
 
-def generate_data_object(api_key, location_details, area_radius):
+def generate_data_object(location_details, area_radius):
     __gen_data = {}
     with open("./artifacts/types.json", 'r') as f:
         __types = json.load(f)
@@ -94,7 +97,7 @@ def generate_data_object(api_key, location_details, area_radius):
 
     for category, subcategories in __types.items():
         thread = threading.Thread(target=process_category,
-                                  args=(__gen_data, __types, api_key, location_details, area_radius, category))
+                                  args=(__gen_data, __types, location_details, area_radius, category))
         thread.start()
         threads.append(thread)
 
@@ -104,8 +107,9 @@ def generate_data_object(api_key, location_details, area_radius):
     return __gen_data
 
 
-def process_category(__gen_data, __types, api_key, location_details, area_radius, category):
-    count_types, min_distance = get_info(api_key, location_details, area_radius, category)
+def process_category(__gen_data, __types, location_details, area_radius, category):
+    count_types, min_distance = get_info(location_details, area_radius, category)
+    print(category + str(count_types) + "," + str(min_distance))
 
     with __lock:
 
@@ -114,74 +118,39 @@ def process_category(__gen_data, __types, api_key, location_details, area_radius
                 __types[category][subcategory] = count_types
                 __gen_data[subcategory] = float(count_types)
             if "_mindist" in subcategory:
-                if "km" in min_distance:
-                    __types[category][subcategory] = min_distance
-                    __gen_data[subcategory] = float(min_distance.replace("km", "").replace(" ", "")) * 1000
-                elif "m" in min_distance:
-                    __types[category][subcategory] = min_distance
-                    __gen_data[subcategory] = float(min_distance.replace("m", "").replace(" ", ""))
-                else:
-                    __types[category][subcategory] = min_distance
-                    __gen_data[subcategory] = float(min_distance.replace(" ", ""))
+                __gen_data[subcategory] = float(min_distance)
 
 
-def get_info(api_key, location_d, radius_m, place_type):
-    places_endpoint = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-    places_params = {
-        'location': location_d,
-        'radius': radius_m,
-        'type': place_type,
-        'key': api_key,
-    }
+def get_info(location_det, radius, type_de):
+    lat, lng = location_det.split(',')
+    try:
+        places = gmaps.places_nearby(location=(lat, lng), radius=radius, type=type_de)
+        count = len(places['results'])
 
-    places_response = requests.get(places_endpoint, params=places_params)
-    places_data = places_response.json()
-
-    if places_data['status'] == 'OK':
-        count_types = len(places_data['results'])
-
-        if count_types > 0:
-            nearest_location = None
-            min_distance = float('inf')
-
-            for result in places_data['results']:
-                location_details = result['geometry']['location']
-                current_distance = haversine_distance(location_d, location_details)
-
-                if current_distance < min_distance:
-                    min_distance = current_distance
-                    nearest_location = location_details
-
-            if nearest_location is not None:
-                distance_endpoint = "https://maps.googleapis.com/maps/api/distancematrix/json"
-                distance_params = {
-                    'origins': location_d,
-                    'destinations': f'{nearest_location["lat"]},{nearest_location["lng"]}',
-                    'key': api_key,
-                }
-
-                distance_response = requests.get(distance_endpoint, params=distance_params)
-                distance_data = distance_response.json()
-
-                if distance_data['status'] == 'OK':
-                    if 'distance' in distance_data['rows'][0]['elements'][0]:
-                        distance = distance_data['rows'][0]['elements'][0]['distance']['text']
-                        return count_types, distance
-                    else:
-                        print(f"Distance information not available for {place_type}")
-                        return count_types, "0 km"
-                else:
-                    print(f"Error calculating distance for {place_type}: {distance_data['status']}")
-                    return count_types, "0 km"
+        if count > 0:
+            distances = [haversine_distance(location_det, place['geometry']['location']) for place in places['results']]
+            if distances:  # Check if distances list is not empty
+                closest_place_index = distances.index(min(distances))
+                closest_place = places['results'][closest_place_index]
+                min_distance = gmaps.distance_matrix(origins=(lat, lng), destinations=(
+                    closest_place['geometry']['location']['lat'], closest_place['geometry']['location']['lng']))[
+                    'rows'][0]['elements'][0][
+                    'distance']['value']
             else:
-                print("Error finding nearest location.")
-                return count_types, "0 km"
+                min_distance = 0
         else:
-            print(f"No {place_type} found.")
-            return 0, "0 km"
-    else:
-        print(f"Error finding {place_type}: {places_data['status']}")
-        return 0, "0 km"
+            min_distance = 0
+        return count, min_distance
+
+    except googlemaps.exceptions.ApiError as e:
+        print(f"An API error occurred while processing {type_de}: {e}")
+        return 0, 0
+    except ValueError as ve:
+        print(f"Error in distance calculation: {ve}")
+        return 0, 0
+    except Exception as ex:
+        print(f"An unexpected error occurred while processing {type_de}: {ex}")
+        return 0, 0
 
 
 def haversine_distance(origin, destination):
