@@ -1,4 +1,6 @@
 from datetime import date
+from typing import Type, Union
+from sklearn.tree import DecisionTreeRegressor
 import math
 import json
 import pickle
@@ -6,24 +8,12 @@ import threading
 import pandas as pd
 import requests
 
-__schools = None
-__city_dic = None
-__data_columns = {}
-__model = None
+__data_columns = []
+__model: Union[None, Type[DecisionTreeRegressor]] = None
 API_KEY = "AIzaSyBYMGxceM10RqSBpWvVRwmL9u_lyjRYb88"
 
 
 def get_input(location, radius):
-    column_names = [
-        "govtscl_a_count", "govtscl_a_mindist", "govtscl_b_count", "govtscl_b_mindist",
-        "semigovtscl_count", "semigovtscl_mindist", "intlscl_count", "intlscl_mindist",
-        "uni_count", "uni_mindist", "express_mindist", "railway_mindist", "bank_mindist",
-        "banks_2km_count", "financeco_mindist", "financecos_2km_count", "govt_hospital_mindist",
-        "govt_hospitals_count", "pvt_hospital_mindist", "pvt_hospitals_count",
-        "pvt_medcenter_mindist", "pvt_medcenters_count", "supermarket_mindist",
-        "supermarkets_2km_count", "fuelstation_mindist", "fuelstations_2km_count",
-        "latitude", "longitude", "curr_month", "curr_year"
-    ]
 
     latitude, longitude = map(float, location.split(','))
 
@@ -36,50 +26,44 @@ def get_input(location, radius):
         "curr_year": [date.today().year]
     })
 
-    x = pd.concat([x1_df, x2_df], axis=1)
+    connected_df = pd.concat([x1_df, x2_df], axis=1)
 
-    input_values = [x[name].values[0] for name in column_names]
+    input_values = [connected_df[name].values[0] for name in __data_columns]
 
-    return input_values, column_names
+    return input_values, __data_columns
 
 
 def get_estimated_price(location, radius):
     load_saved_artifacts()
     input_values, column_names = get_input(location, radius)
-    output_array = __model.predict([input_values])[0]
 
-    return {
-        "Price": output_array[0],
-        "min_next_month": output_array[1],
-        "max_next_month": output_array[2]
-    }
+    try:
+        if __model is None:
+            raise ValueError("Model is not loaded. Cannot make predictions.")
+
+        output_array = __model.predict([input_values])[0]
+        return {
+            "price": output_array[0],
+            "min_next": output_array[1],
+            "max_next": output_array[2]
+        }
+    except Exception as e:
+        return {"message": f"Error: {str(e)}"}
 
 
 def load_saved_artifacts():
     print("Loading saved artifacts...")
-    global __schools
     global __data_columns
-    global __city_dic
     global __model
 
     with open("./artifacts/columns.json", 'r') as f:
         __data_columns = json.load(f)['data_columns']
-        __schools = __data_columns[2:9]
-
-    with open("./artifacts/city_dict.json", 'r') as f:
-        __city_dic = json.load(f)['city_dict']
 
     with open("./artifacts/Model.pickle", 'rb') as f:
         __model = pickle.load(f)
-        print("Loading saved artifacts...done!")
-
-
-def get_schools():
-    return __schools
-
-
-def get_cities():
-    return __city_dic
+        if not isinstance(__model, DecisionTreeRegressor):
+            raise ValueError("Loaded model is not a DecisionTreeRegressor.")
+    print("Loading saved artifacts...done!")
 
 
 def generate_data_object(api_key, location_details, area_radius):
@@ -176,7 +160,7 @@ def haversine_distance(origin, destination):
     lat1, lon1 = map(float, origin.split(","))
     lat2, lon2 = destination["lat"], destination["lng"]
 
-    R = 6371
+    const_r = 6371
     d_lat = deg2rad(lat2 - lat1)
     d_lon = deg2rad(lon2 - lon1)
 
@@ -185,7 +169,7 @@ def haversine_distance(origin, destination):
          math.sin(d_lon / 2) * math.sin(d_lon / 2))
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-    distance = R * c
+    distance = const_r * c
     return distance
 
 
