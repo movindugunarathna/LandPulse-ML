@@ -14,6 +14,55 @@ __model = None
 API_KEY = "AIzaSyBYMGxceM10RqSBpWvVRwmL9u_lyjRYb88"
 
 
+def get_input(location, radius):
+    column_names = [
+        "govtscl_a_count", "govtscl_a_mindist", "govtscl_b_count", "govtscl_b_mindist",
+        "semigovtscl_count", "semigovtscl_mindist", "intlscl_count", "intlscl_mindist",
+        "uni_count", "uni_mindist", "express_mindist", "railway_mindist", "bank_mindist",
+        "banks_2km_count", "financeco_mindist", "financecos_2km_count", "govt_hospital_mindist",
+        "govt_hospitals_count", "pvt_hospital_mindist", "pvt_hospitals_count",
+        "pvt_medcenter_mindist", "pvt_medcenters_count", "supermarket_mindist",
+        "supermarkets_2km_count", "fuelstation_mindist", "fuelstations_2km_count",
+        "latitude", "longitude", "curr_month", "curr_year"
+    ]
+
+    latitude, longitude = map(float, location.split(','))
+
+    x1_df = pd.DataFrame(generate_data_object(API_KEY, location, radius), index=[0])
+
+    # Create x2_df with additional features
+    x2_df = pd.DataFrame({
+        "latitude": [latitude],
+        "longitude": [longitude],
+        "curr_month": [date.today().month],
+        "curr_year": [date.today().year]
+    })
+
+    # Concatenate x1_df and x2_df along columns
+    x = pd.concat([x1_df, x2_df], axis=1)
+
+    input_values = []
+
+    for name in column_names:
+        input_values.append(x[name].values[0])
+
+    return input_values, column_names
+
+
+def get_estimated_price(location, radius):
+    load_saved_artifacts()
+
+    input_values, column_names = get_input(location, radius)
+
+    # Assuming __model is defined somewhere in your code
+    output_array = __model.predict([input_values])[0]
+    return {
+        "Price": (output_array[0]),
+        "min_next_month": (output_array[1]),
+        "max_next_month": (output_array[2])
+    }
+
+
 def load_saved_artifacts():
     print("Loading saved artifacts...")
     global __schools
@@ -31,36 +80,6 @@ def load_saved_artifacts():
     with open("./artifacts/Model.pickle", 'rb') as f:
         __model = pickle.load(f)
         print("Loading saved artifacts...done!")
-
-
-def get_estimated_price(location, radius):
-    load_saved_artifacts()
-    latitude, longitude = map(float, location.split(','))
-
-    l = generate_data_object(API_KEY, location, radius)
-    print(l)
-    # Generate data objects
-    x1_df = pd.DataFrame(l, index=[0])
-
-    # Create x2_df with additional features
-    x2_df = pd.DataFrame({
-        "id": 0,
-        "land_type": 8,
-        "max_curr": 0,
-        "min_curr": 0,
-        "latitude": [latitude],
-        "longitude": [longitude],
-        "curr_month": [date.today().month],
-        "curr_year": [date.today().year]
-    })
-
-    # Concatenate x1_df and x2_df along columns
-    x = pd.concat([x1_df, x2_df], axis=1)
-
-    # Assuming __model is defined somewhere in your code
-    return __model.predict(x)[0]
-
-
 
 
 def get_schools():
@@ -201,6 +220,6 @@ def deg2rad(deg):
 
 
 if __name__ == '__main__':
-    location_input = "6.919962, 80.029113"
+    location_input = "6.897928711019126,79.91887213019518"
     radius_input = 5000
-    print(get_estimated_price(location_input, radius_input))
+    x = get_estimated_price(location_input, radius_input)
