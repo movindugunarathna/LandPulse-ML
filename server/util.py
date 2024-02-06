@@ -8,12 +8,13 @@ import json
 import pickle
 import threading
 import pandas as pd
+import requests
 
 __data_columns = []
 __land_types = {}
 __model: Union[None, Type[DecisionTreeRegressor]] = None
-API_KEY = "AIzaSyBYMGxceM10RqSBpWvVRwmL9u_lyjRYb88"
-gmaps = googlemaps.Client(key="AIzaSyBYMGxceM10RqSBpWvVRwmL9u_lyjRYb88")
+API_KEY = "AIzaSyCSc_6rH2w_-teCPCvcSe_u6DSd1tIAAAI"
+gmaps = googlemaps.Client(key=API_KEY)
 __lock = threading.Lock()
 
 
@@ -70,6 +71,36 @@ def get_estimated_price(location, land_type, radius):
     return {"message": "Nothing came out!"}
 
 
+def get_air_quality(latitude, longitude, api_key):
+    url = 'https://airquality.googleapis.com/v1/currentConditions:lookup?key=' + api_key
+
+    # Define the data to be sent in the request body (in JSON format)
+    data = {
+        "universalAqi": True,
+        "location": {
+            "latitude": latitude,
+            "longitude": longitude,
+        },
+        "extraComputations": [
+            "HEALTH_RECOMMENDATIONS",
+            "DOMINANT_POLLUTANT_CONCENTRATION",
+            "POLLUTANT_CONCENTRATION",
+            "LOCAL_AQI",
+            "POLLUTANT_ADDITIONAL_INFO"
+        ],
+        "languageCode": "en"
+    }
+
+    response = requests.post(url, json=data)
+    data = response.json()
+
+    value = 0
+    if 'indexes' in data:
+        value = sum(index['aqi'] for index in data['indexes'])
+
+    return value
+
+
 def get_input(location, land_type, radius):
     latitude, longitude = map(float, location.split(','))
 
@@ -77,8 +108,9 @@ def get_input(location, land_type, radius):
 
     x2_df = pd.DataFrame({
         "land_type": land_type_generation(land_type),
-        "latitude": [latitude],
-        "longitude": [longitude],
+        "lat": [latitude],
+        "long": [longitude],
+        "air": get_air_quality(latitude, longitude, API_KEY),
         "curr_month": [date.today().month],
         "curr_year": [date.today().year]
     })
@@ -95,9 +127,9 @@ def generate_data_object(location_details, area_radius):
 
     threads = []
 
-    for category, subcategories in __types.items():
+    for place in __types:
         thread = threading.Thread(target=process_category,
-                                  args=(__gen_data, __types, location_details, area_radius, category))
+                                  args=(__gen_data, __types, location_details, area_radius, place))
         thread.start()
         threads.append(thread)
 
@@ -112,13 +144,8 @@ def process_category(__gen_data, __types, location_details, area_radius, categor
     print(category + str(count_types) + "," + str(min_distance))
 
     with __lock:
-
-        for subcategory, value in __types[category].items():
-            if "_count" in subcategory:
-                __types[category][subcategory] = count_types
-                __gen_data[subcategory] = float(count_types)
-            if "_mindist" in subcategory:
-                __gen_data[subcategory] = float(min_distance)
+        __gen_data[category+'_count'] = float(count_types)
+        __gen_data[category+'_mdist'] = float(count_types)
 
 
 def get_info(location_det, radius, type_de):
