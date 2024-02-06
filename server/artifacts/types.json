@@ -1,56 +1,22 @@
-{
-  "primary_school": {
-    "govtscl_a_count": null,
-    "govtscl_a_mindist": null
-  },
-  "high_school": {
-    "govtscl_b_count": null,
-    "govtscl_b_mindist": null
-  },
-  "college": {
-    "semigovtscl_count": null,
-    "semigovtscl_mindist": null
-  },
-  "international_school": {
-    "intlscl_count": null,
-    "intlscl_mindist": null
-  },
-  "university": {
-    "uni_count": null,
-    "uni_mindist": null
-  },
-  "bus_station": {
-    "express_mindist": null
-  },
-  "train_station": {
-    "railway_mindist": null
-  },
-  "bank": {
-    "bank_mindist": null,
-    "banks_2km_count": null
-  },
-  "finance": {
-    "financeco_mindist": null,
-    "financecos_2km_count": null
-  },
-  "hospital": {
-    "govt_hospital_mindist": null,
-    "govt_hospitals_count": null
-  },
-  "doctor": {
-    "pvt_hospital_mindist": null,
-    "pvt_hospitals_count": null
-  },
-  "pharmacy": {
-    "pvt_medcenter_mindist": null,
-    "pvt_medcenters_count": null
-  },
-  "supermarket": {
-    "supermarket_mindist": null,
-    "supermarkets_2km_count": null
-  },
-  "gas_station": {
-    "fuelstation_mindist": null,
-    "fuelstations_2km_count": null
-  }
-}
+[
+    "bakery",
+    "bank",
+    "bar",
+    "bus_station",
+    "clothing_store",
+    "doctor",
+    "gas_station",
+    "gym",
+    "hospital",
+    "university",
+    "train_station",
+    "supermarket",
+    "store",
+    "school",
+    "restaurant",
+    "police",
+    "post_office",
+    "pharmacy",
+    "movie_theater",
+    "library"
+]
