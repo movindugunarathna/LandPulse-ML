@@ -128,11 +128,20 @@
         "documentation": {}
     },
     {
+        "label": "predict_land_price",
+        "kind": 2,
+        "importPath": "server.server",
+        "description": "server.server",
+        "peekOfCode": "def predict_land_price():\n    longitude = request.form['longitude']\n    latitude = request.form['latitude']\n    radius = int(request.form['radius'])\n    land_type = request.form['landType']\n    location = latitude+','+longitude\n    response = jsonify(util.get_estimated_price(location=location, land_type=land_type, radius=radius))\n    response.headers.add('Access-Control-Allow-Origin', '*')\n    return response\nif __name__ == '__main__':",
+        "detail": "server.server",
+        "documentation": {}
+    },
+    {
         "label": "app",
         "kind": 5,
         "importPath": "server.server",
         "description": "server.server",
-        "peekOfCode": "app = Flask(__name__)\nif __name__ == '__main__':\n    print(\"Starting Python Flask server for Colombo Land Price Prediction\")\n    util.load_saved_artifacts()\n    app.run()",
+        "peekOfCode": "app = Flask(__name__)\n@app.route('/predict', methods=['POST'])\ndef predict_land_price():\n    longitude = request.form['longitude']\n    latitude = request.form['latitude']\n    radius = int(request.form['radius'])\n    land_type = request.form['landType']\n    location = latitude+','+longitude\n    response = jsonify(util.get_estimated_price(location=location, land_type=land_type, radius=radius))\n    response.headers.add('Access-Control-Allow-Origin', '*')",
         "detail": "server.server",
         "documentation": {}
     },
