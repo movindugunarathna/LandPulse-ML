@@ -1,0 +1,283 @@
+[
+    {
+        "label": "Flask",
+        "importPath": "flask",
+        "description": "flask",
+        "isExtraImport": true,
+        "detail": "flask",
+        "documentation": {}
+    },
+    {
+        "label": "request",
+        "importPath": "flask",
+        "description": "flask",
+        "isExtraImport": true,
+        "detail": "flask",
+        "documentation": {}
+    },
+    {
+        "label": "jsonify",
+        "importPath": "flask",
+        "description": "flask",
+        "isExtraImport": true,
+        "detail": "flask",
+        "documentation": {}
+    },
+    {
+        "label": "util",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "util",
+        "description": "util",
+        "detail": "util",
+        "documentation": {}
+    },
+    {
+        "label": "date",
+        "importPath": "datetime",
+        "description": "datetime",
+        "isExtraImport": true,
+        "detail": "datetime",
+        "documentation": {}
+    },
+    {
+        "label": "Type",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Union",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "googlemaps",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "googlemaps",
+        "description": "googlemaps",
+        "detail": "googlemaps",
+        "documentation": {}
+    },
+    {
+        "label": "DecisionTreeRegressor",
+        "importPath": "sklearn.tree",
+        "description": "sklearn.tree",
+        "isExtraImport": true,
+        "detail": "sklearn.tree",
+        "documentation": {}
+    },
+    {
+        "label": "math",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "math",
+        "description": "math",
+        "detail": "math",
+        "documentation": {}
+    },
+    {
+        "label": "json",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "json",
+        "description": "json",
+        "detail": "json",
+        "documentation": {}
+    },
+    {
+        "label": "pickle",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "pickle",
+        "description": "pickle",
+        "detail": "pickle",
+        "documentation": {}
+    },
+    {
+        "label": "threading",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "threading",
+        "description": "threading",
+        "detail": "threading",
+        "documentation": {}
+    },
+    {
+        "label": "pandas",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "pandas",
+        "description": "pandas",
+        "detail": "pandas",
+        "documentation": {}
+    },
+    {
+        "label": "requests",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "requests",
+        "description": "requests",
+        "detail": "requests",
+        "documentation": {}
+    },
+    {
+        "label": "predict_land_price",
+        "kind": 2,
+        "importPath": "server.server",
+        "description": "server.server",
+        "peekOfCode": "def predict_land_price():\n    longitude = request.form['longitude']\n    latitude = request.form['latitude']\n    radius = int(request.form['radius'])\n    land_type = request.form['landType']\n    location = latitude+','+longitude\n    response = jsonify(util.get_estimated_price(location=location, land_type=land_type, radius=radius))\n    response.headers.add('Access-Control-Allow-Origin', '*')\n    return response\nif __name__ == '__main__':",
+        "detail": "server.server",
+        "documentation": {}
+    },
+    {
+        "label": "app",
+        "kind": 5,
+        "importPath": "server.server",
+        "description": "server.server",
+        "peekOfCode": "app = Flask(__name__)\n@app.route('/predict', methods=['POST'])\ndef predict_land_price():\n    longitude = request.form['longitude']\n    latitude = request.form['latitude']\n    radius = int(request.form['radius'])\n    land_type = request.form['landType']\n    location = latitude+','+longitude\n    response = jsonify(util.get_estimated_price(location=location, land_type=land_type, radius=radius))\n    response.headers.add('Access-Control-Allow-Origin', '*')",
+        "detail": "server.server",
+        "documentation": {}
+    },
+    {
+        "label": "load_saved_artifacts",
+        "kind": 2,
+        "importPath": "server.util",
+        "description": "server.util",
+        "peekOfCode": "def load_saved_artifacts():\n    print(\"Loading saved artifacts...\")\n    global __data_columns\n    global __model\n    global __land_types\n    global gmaps\n    with open(\"./artifacts/columns.json\", 'r') as f:\n        __data_columns = json.load(f)['data_columns']\n    with open(\"./artifacts/landType.json\", 'r') as f:\n        __land_types = json.load(f)",
+        "detail": "server.util",
+        "documentation": {}
+    },
+    {
+        "label": "get_estimated_price",
+        "kind": 2,
+        "importPath": "server.util",
+        "description": "server.util",
+        "peekOfCode": "def get_estimated_price(location, land_type, radius):\n    input_values = get_input(location, land_type, radius)\n    while True:\n        if len(input_values) == len(__data_columns):\n            try:\n                if __model is None:\n                    raise ValueError(\"Model is not loaded. Cannot make predictions.\")\n                dictionary = {}\n                for i, name in enumerate(__data_columns):\n                    dictionary[name] = input_values[i]",
+        "detail": "server.util",
+        "documentation": {}
+    },
+    {
+        "label": "get_air_quality",
+        "kind": 2,
+        "importPath": "server.util",
+        "description": "server.util",
+        "peekOfCode": "def get_air_quality(latitude, longitude, api_key):\n    url = 'https://airquality.googleapis.com/v1/currentConditions:lookup?key=' + api_key\n    # Define the data to be sent in the request body (in JSON format)\n    data = {\n        \"universalAqi\": True,\n        \"location\": {\n            \"latitude\": latitude,\n            \"longitude\": longitude,\n        },\n        \"extraComputations\": [",
+        "detail": "server.util",
+        "documentation": {}
+    },
+    {
+        "label": "get_input",
+        "kind": 2,
+        "importPath": "server.util",
+        "description": "server.util",
+        "peekOfCode": "def get_input(location, land_type, radius):\n    latitude, longitude = map(float, location.split(','))\n    x1_df = pd.DataFrame(generate_data_object(location, radius), index=[0])\n    x2_df = pd.DataFrame({\n        \"land_type\": land_type_generation(land_type),\n        \"lat\": [latitude],\n        \"long\": [longitude],\n        \"air\": get_air_quality(latitude, longitude, API_KEY),\n        \"curr_month\": [date.today().month],\n        \"curr_year\": [date.today().year]",
+        "detail": "server.util",
+        "documentation": {}
+    },
+    {
+        "label": "generate_data_object",
+        "kind": 2,
+        "importPath": "server.util",
+        "description": "server.util",
+        "peekOfCode": "def generate_data_object(location_details, area_radius):\n    __gen_data = {}\n    with open(\"./artifacts/types.json\", 'r') as f:\n        __types = json.load(f)\n    threads = []\n    for place in __types:\n        thread = threading.Thread(target=process_category,\n                                  args=(__gen_data, __types, location_details, area_radius, place))\n        thread.start()\n        threads.append(thread)",
+        "detail": "server.util",
+        "documentation": {}
+    },
+    {
+        "label": "process_category",
+        "kind": 2,
+        "importPath": "server.util",
+        "description": "server.util",
+        "peekOfCode": "def process_category(__gen_data, __types, location_details, area_radius, category):\n    count_types, min_distance = get_info(location_details, area_radius, category)\n    print(category + str(count_types) + \",\" + str(min_distance))\n    with __lock:\n        __gen_data[category+'_count'] = float(count_types)\n        __gen_data[category+'_mdist'] = float(count_types)\ndef get_info(location_det, radius, type_de):\n    lat, lng = location_det.split(',')\n    try:\n        places = gmaps.places_nearby(location=(lat, lng), radius=radius, type=type_de)",
+        "detail": "server.util",
+        "documentation": {}
+    },
+    {
+        "label": "get_info",
+        "kind": 2,
+        "importPath": "server.util",
+        "description": "server.util",
+        "peekOfCode": "def get_info(location_det, radius, type_de):\n    lat, lng = location_det.split(',')\n    try:\n        places = gmaps.places_nearby(location=(lat, lng), radius=radius, type=type_de)\n        count = len(places['results'])\n        if count > 0:\n            distances = [haversine_distance(location_det, place['geometry']['location']) for place in places['results']]\n            if distances:  # Check if distances list is not empty\n                closest_place_index = distances.index(min(distances))\n                closest_place = places['results'][closest_place_index]",
+        "detail": "server.util",
+        "documentation": {}
+    },
+    {
+        "label": "haversine_distance",
+        "kind": 2,
+        "importPath": "server.util",
+        "description": "server.util",
+        "peekOfCode": "def haversine_distance(origin, destination):\n    lat1, lon1 = map(float, origin.split(\",\"))\n    lat2, lon2 = destination[\"lat\"], destination[\"lng\"]\n    const_r = 6371\n    d_lat = deg2rad(lat2 - lat1)\n    d_lon = deg2rad(lon2 - lon1)\n    a = (math.sin(d_lat / 2) * math.sin(d_lat / 2) +\n         math.cos(deg2rad(lat1)) * math.cos(deg2rad(lat2)) *\n         math.sin(d_lon / 2) * math.sin(d_lon / 2))\n    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))",
+        "detail": "server.util",
+        "documentation": {}
+    },
+    {
+        "label": "land_type_generation",
+        "kind": 2,
+        "importPath": "server.util",
+        "description": "server.util",
+        "peekOfCode": "def land_type_generation(land_type):\n    land_type_value = 0\n    for key, value in __land_types.items():\n        if key in land_type:\n            land_type_value += value\n    return land_type_value\ndef deg2rad(deg):\n    return deg * (math.pi / 180)",
+        "detail": "server.util",
+        "documentation": {}
+    },
+    {
+        "label": "deg2rad",
+        "kind": 2,
+        "importPath": "server.util",
+        "description": "server.util",
+        "peekOfCode": "def deg2rad(deg):\n    return deg * (math.pi / 180)",
+        "detail": "server.util",
+        "documentation": {}
+    },
+    {
+        "label": "__data_columns",
+        "kind": 5,
+        "importPath": "server.util",
+        "description": "server.util",
+        "peekOfCode": "__data_columns = []\n__land_types = {}\n__model: Union[None, Type[DecisionTreeRegressor]] = None\nAPI_KEY = \"AIzaSyCSc_6rH2w_-teCPCvcSe_u6DSd1tIAAAI\"\ngmaps = googlemaps.Client(key=API_KEY)\n__lock = threading.Lock()\ndef load_saved_artifacts():\n    print(\"Loading saved artifacts...\")\n    global __data_columns\n    global __model",
+        "detail": "server.util",
+        "documentation": {}
+    },
+    {
+        "label": "__land_types",
+        "kind": 5,
+        "importPath": "server.util",
+        "description": "server.util",
+        "peekOfCode": "__land_types = {}\n__model: Union[None, Type[DecisionTreeRegressor]] = None\nAPI_KEY = \"AIzaSyCSc_6rH2w_-teCPCvcSe_u6DSd1tIAAAI\"\ngmaps = googlemaps.Client(key=API_KEY)\n__lock = threading.Lock()\ndef load_saved_artifacts():\n    print(\"Loading saved artifacts...\")\n    global __data_columns\n    global __model\n    global __land_types",
+        "detail": "server.util",
+        "documentation": {}
+    },
+    {
+        "label": "API_KEY",
+        "kind": 5,
+        "importPath": "server.util",
+        "description": "server.util",
+        "peekOfCode": "API_KEY = \"AIzaSyCSc_6rH2w_-teCPCvcSe_u6DSd1tIAAAI\"\ngmaps = googlemaps.Client(key=API_KEY)\n__lock = threading.Lock()\ndef load_saved_artifacts():\n    print(\"Loading saved artifacts...\")\n    global __data_columns\n    global __model\n    global __land_types\n    global gmaps\n    with open(\"./artifacts/columns.json\", 'r') as f:",
+        "detail": "server.util",
+        "documentation": {}
+    },
+    {
+        "label": "gmaps",
+        "kind": 5,
+        "importPath": "server.util",
+        "description": "server.util",
+        "peekOfCode": "gmaps = googlemaps.Client(key=API_KEY)\n__lock = threading.Lock()\ndef load_saved_artifacts():\n    print(\"Loading saved artifacts...\")\n    global __data_columns\n    global __model\n    global __land_types\n    global gmaps\n    with open(\"./artifacts/columns.json\", 'r') as f:\n        __data_columns = json.load(f)['data_columns']",
+        "detail": "server.util",
+        "documentation": {}
+    },
+    {
+        "label": "__lock",
+        "kind": 5,
+        "importPath": "server.util",
+        "description": "server.util",
+        "peekOfCode": "__lock = threading.Lock()\ndef load_saved_artifacts():\n    print(\"Loading saved artifacts...\")\n    global __data_columns\n    global __model\n    global __land_types\n    global gmaps\n    with open(\"./artifacts/columns.json\", 'r') as f:\n        __data_columns = json.load(f)['data_columns']\n    with open(\"./artifacts/landType.json\", 'r') as f:",
+        "detail": "server.util",
+        "documentation": {}
+    }
+]
