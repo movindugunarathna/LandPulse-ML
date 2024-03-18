@@ -26,11 +26,10 @@ def predict_land_price():
         land_type = request_data['landType']
         location = latitude + ',' + longitude
 
-        print(location + ' ' + radius + ' '+ land_type)
-        msg = {
-            'message': "Request received"
-        }
-        response = jsonify(msg)
+        predicted_details = util.convert_int_to_str(
+        util.get_estimated_price(location=location, land_type=land_type, radius=radius))
+        print("Predicted price:" + str(predicted_details))
+        response = jsonify(predicted_details)
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
 
         return response
