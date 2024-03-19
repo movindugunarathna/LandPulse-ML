@@ -1,0 +1,61 @@
+# Environment folder
+env/
+
+# Server folder (adjust the path if different)
+server/env/
+server/__pycache__/
+server/*.pyc
+server/*.pyo
+
+# Distribution / packaging (adjust the path if different)
+server/build/
+server/develop-eggs/
+server/dist/
+server/downloads/
+server/eggs/
+server/.eggs/
+server/lib/
+server/lib64/
+server/parts/
+server/sdist/
+server/var/
+server/wheels/
+server/share/python-wheels/
+server/*.egg-info/
+server/.installed.cfg
+server/*.egg
+
+# PyInstaller temporary files (adjust the path if different)
+server/*.manifest
+server/*.spec
+
+# Web assets cache (if using WebAssets)
+server/.webassets-cache
+
+# Celery beat schedule file (adjust the path if different)
+server/celerybeat-schedule
+
+# Any other project-specific files within server/ (adjust the path if different)
+server/# Add patterns here (e.g., server/logs/*.log)
+
+# Other project-specific files outside server/
+.idea/
+.vscode/
+.env
+# ... other lines from previous response ...
+
+# Testing and coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+
+# Sphinx documentation
+docs/_build/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Scrapy leftovers
+.scrapy

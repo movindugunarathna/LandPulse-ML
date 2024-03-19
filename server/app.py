@@ -1,8 +1,13 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS, cross_origin
+import os
+from dotenv import load_dotenv
+
 import util
 
+load_dotenv()
 app = Flask(__name__)
+PORT=os.environ.get("PORT")
 CORS(app)
 
 
@@ -11,6 +16,10 @@ def handle_error(e):
     response = jsonify({'error': str(e)})
     response.status_code = 500
     return response
+
+@app.route('/')
+def hello_landpulse():
+    return 'Hello, Landpulse'
 
 
 @app.route('/predict', methods=['POST', 'GET', 'OPTIONS'])
@@ -40,5 +49,5 @@ def predict_land_price():
 
 
 if __name__ == '__main__':
-    print("Starting Python Flask server for Colombo Land Price Prediction")
-    app.run()
+    print("Starting Python Flask server for Colombo Land Price Prediction: "+str(PORT))
+    app.run(host="0.0.0.0", port=int(PORT))
