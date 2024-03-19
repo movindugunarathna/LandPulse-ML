@@ -22,7 +22,7 @@ __model: Union[None, Type[MultiOutputRegressor]] = None
 API_KEY = os.getenv("API_KEY")
 gmaps = googlemaps.Client(key=API_KEY)
 __lock = threading.Lock()
-min_date = date.today()
+min_date = datetime.strptime("2015-09-10", "%Y-%m-%d")
 # Categories for one-hot encoding
 categories = [
     'Agricultural',
@@ -80,6 +80,7 @@ def get_estimated_price(location, land_type, radius):
                     for i in range(-4, 2):
                         current_date = date.today() + timedelta(days=i * 365)
                         date_from = add_date_count(current_date, min_date)
+                        print(str(date_from), " :", str(current_date))
 
                         # add month randomly
                         input_values[len(input_values) - 1] = date_from
